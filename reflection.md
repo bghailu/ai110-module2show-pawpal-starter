@@ -1,6 +1,9 @@
 # PawPal+ Project Reflection
 
 ## 1. System Design
+1. Edit schedule
+2. See medication
+3. Schedule a grooming
 
 **a. Initial design**
 
