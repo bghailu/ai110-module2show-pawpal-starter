@@ -22,6 +22,15 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling
+
+`pawpal_system.py` includes several scheduling features beyond a basic task list:
+
+- **Priority-based scheduling** — tasks are sorted by priority (1 = high) before being placed into the owner's available time window. Shorter tasks break ties to maximize the number of tasks that fit.
+- **Conflict detection** — `DailyPlan.detect_conflicts()` checks all scheduled tasks for overlapping time windows and returns a list of warning messages without crashing the program.
+- **Recurring tasks** — tasks can be marked `"daily"` or `"weekly"`. Calling `DailyPlan.mark_task_complete(task)` marks the task done and automatically appends a new instance with the next due date (calculated with `timedelta`) to the plan.
+- **Filtering and sorting** — `filter_tasks(completed=..., pet_name=...)` narrows the task list by status or pet; `sort_by_time()` returns scheduled tasks in chronological order.
+
 ## Getting started
 
 ### Setup

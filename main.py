@@ -23,4 +23,16 @@ tasks = [
 plan = DailyPlan(owner=owner, tasks=tasks, plan_date=date.today())
 plan.generate()
 
+# Manually force a conflict: override Enrichment play to overlap with Brushing
+enrichment = next(t for t in tasks if t.name == "Enrichment play")
+enrichment.schedule(time(8, 5), "manually scheduled — overlaps with Feed breakfast")
+
 print(plan.summary())
+
+print("\n--- Conflict Check ---")
+conflicts = plan.detect_conflicts()
+if conflicts:
+    for warning in conflicts:
+        print(f"WARNING: {warning}")
+else:
+    print("No conflicts detected.")
