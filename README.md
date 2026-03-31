@@ -31,6 +31,12 @@ Your final app should:
 - **Recurring tasks** — tasks can be marked `"daily"` or `"weekly"`. Calling `DailyPlan.mark_task_complete(task)` marks the task done and automatically appends a new instance with the next due date (calculated with `timedelta`) to the plan.
 - **Filtering and sorting** — `filter_tasks(completed=..., pet_name=...)` narrows the task list by status or pet; `sort_by_time()` returns scheduled tasks in chronological order.
 
+## Demo
+
+![PawPal+ demo screenshot](demo.png)
+
+The screenshot shows two tasks added for Mochi — a high-priority morning walk and a medium-priority feed. After clicking **Generate schedule**, both tasks are placed in chronological order within the owner's available window, with Done buttons to mark each complete.
+
 ## Getting started
 
 ### Setup

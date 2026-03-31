@@ -17,6 +17,7 @@ Owner holds the user's time constraints and knows how much time is available in 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+Yes it changed multiple times when I was adding new fretures. For example Task needed to have a recurring and non recurring version. So I have added new attributes and methods for that change.
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
@@ -37,13 +38,11 @@ Owner holds the user's time constraints and knows how much time is available in 
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used AI mainly for two things: talking through the initial class design before writing any code, and speeding up repetitive implementation work like adding filtering and sorting methods. The most useful prompts were specific ones — asking "given this class structure, what's the cleanest way to handle recurring tasks?" got better results than broad questions like "help me with scheduling."
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+When the AI first suggested how to handle recurring tasks, it proposed a separate `RecurringTask` subclass. I didn't accept that because it would have complicated the filtering and scheduling logic that already worked on a flat list of `Task` objects. Instead I kept a single class and added `frequency` as an optional attribute, which was simpler and still covered the use case.
 
 ---
 
@@ -51,13 +50,13 @@ Owner holds the user's time constraints and knows how much time is available in 
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I tested that the scheduler respects priority order, that tasks exceeding the available window are left unscheduled rather than overflow, that completing a recurring task produces a new instance with the correct next due date, and that conflict detection flags overlapping tasks.
+
+These tests mattered because the scheduling and recurrence logic are the core of the app — if those are wrong, the daily plan output is meaningless regardless of how good the UI looks.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+I'm confident in the happy-path cases that are covered by tests. I'm less confident around edge cases like tasks that exactly fill the remaining window (boundary arithmetic), or what happens if an owner's start and end times span midnight. I'd test those next.
 
 ---
 
@@ -65,12 +64,12 @@ Owner holds the user's time constraints and knows how much time is available in 
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+The class structure held up well as features were added. Keeping `Task` responsible for its own scheduling state (start time, completion, next occurrence) meant `DailyPlan` stayed focused on coordination rather than managing task details directly.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+I'd add the ability to edit or reorder tasks after they've been added instead of only being able to remove them. Right now fixing a mistake means deleting a task and re-entering it, which is clunky.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+AI is most useful as a collaborator on design decisions when you already have a partial mental model to push back with. If you accept suggestions passively without running them against the actual constraints of your system, you end up with code that's locally reasonable but doesn't fit together well.

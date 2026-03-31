@@ -6,9 +6,9 @@ st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 st.title("🐾 PawPal+")
 
 # ---------------------------------------------------------------------------
-# Owner & Pet
+# Owner & Pets
 # ---------------------------------------------------------------------------
-st.subheader("Owner & Pet")
+st.subheader("Owner & Pets")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -19,24 +19,46 @@ with col2:
     pet_name = st.text_input("Pet name", value="Mochi")
     species = st.selectbox("Species", ["dog", "cat", "other"])
 
-if st.button("Set Owner & Pet"):
-    st.session_state.owner = ps.Owner(
-        name=owner_name,
-        available_start=avail_start,
-        available_end=avail_end,
-    )
-    st.session_state.pet = ps.Pet(name=pet_name, species=species)
-    st.session_state.tasks = []          # reset tasks when owner/pet changes
-    st.success(f"Saved: {owner_name} with pet {pet_name} ({species})")
+if "pets" not in st.session_state:
+    st.session_state.pets = []
+
+col_save, col_add = st.columns(2)
+with col_save:
+    if st.button("Save Owner"):
+        st.session_state.owner = ps.Owner(
+            name=owner_name,
+            available_start=avail_start,
+            available_end=avail_end,
+        )
+        st.session_state.tasks = []
+        st.session_state.plan = None
+        st.success(f"Saved owner: {owner_name}")
+with col_add:
+    if st.button("Add Pet"):
+        if not pet_name.strip():
+            st.warning("Enter a pet name.")
+        else:
+            st.session_state.pets.append(ps.Pet(name=pet_name.strip(), species=species))
+            st.success(f"Added {pet_name} ({species})")
 
 if "owner" in st.session_state:
     o = st.session_state.owner
-    p = st.session_state.pet
     st.caption(
-        f"Active: **{o.name}** | {p.name} ({p.species}) | "
+        f"Owner: **{o.name}** | "
         f"{o.available_start.strftime('%I:%M %p')} – {o.available_end.strftime('%I:%M %p')} "
         f"({o.available_minutes()} min available)"
     )
+
+if st.session_state.pets:
+    st.write("**Pets:**")
+    for i, p in enumerate(st.session_state.pets):
+        col_pet, col_remove = st.columns([5, 1])
+        with col_pet:
+            st.write(f"- {p.name} ({p.species})")
+        with col_remove:
+            if st.button("Remove", key=f"remove_pet_{i}"):
+                st.session_state.pets.pop(i)
+                st.rerun()
 
 st.divider()
 
@@ -48,38 +70,59 @@ st.subheader("Tasks")
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-if "owner" not in st.session_state:
-    st.info("Set an owner and pet above before adding tasks.")
+if "owner" not in st.session_state or not st.session_state.pets:
+    st.info("Save an owner and add at least one pet above before adding tasks.")
 else:
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         task_title = st.text_input("Task title", value="Morning walk")
     with col2:
-        duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
+        pet_options = [p.name for p in st.session_state.pets]
+        selected_pet_name = st.selectbox("Pet", pet_options)
     with col3:
+        duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
+    with col4:
         priority_label = st.selectbox("Priority", ["high", "medium", "low"])
+    with col5:
+        frequency_label = st.selectbox("Frequency", ["one-time", "daily", "weekly"])
 
     if st.button("Add task"):
         priority_map = {"high": 1, "medium": 2, "low": 3}
+        frequency_map = {"one-time": None, "daily": "daily", "weekly": "weekly"}
+        selected_pet = next(p for p in st.session_state.pets if p.name == selected_pet_name)
         task = ps.Task(
             name=task_title,
-            pet=st.session_state.pet,
+            pet=selected_pet,
             duration_minutes=int(duration),
             priority=priority_map[priority_label],
+            frequency=frequency_map[frequency_label],
+            due_date=date.today(),
         )
         st.session_state.tasks.append(task)
 
     if st.session_state.tasks:
-        st.write("Current tasks:")
+        with st.expander("Filter tasks"):
+            filter_status = st.selectbox("Show", ["all", "incomplete", "completed"])
+            completed_map = {"all": None, "completed": True, "incomplete": False}
+            temp_plan = ps.DailyPlan(
+                owner=st.session_state.owner,
+                tasks=st.session_state.tasks,
+                plan_date=date.today(),
+            )
+            filtered = temp_plan.filter_tasks(completed=completed_map[filter_status])
+
         priority_names = {1: "high", 2: "medium", 3: "low"}
+        st.write(f"Tasks ({len(filtered)} shown):")
         rows = [
             {
                 "Task": t.name,
                 "Pet": t.pet.name,
                 "Duration (min)": t.duration_minutes,
                 "Priority": priority_names[t.priority],
+                "Frequency": t.frequency or "one-time",
+                "Done": "✓" if t.completed else "",
             }
-            for t in st.session_state.tasks
+            for t in filtered
         ]
         st.table(rows)
     else:
@@ -91,6 +134,9 @@ st.divider()
 # Generate Schedule
 # ---------------------------------------------------------------------------
 st.subheader("Build Schedule")
+
+if "plan" not in st.session_state:
+    st.session_state.plan = None
 
 if st.button("Generate schedule"):
     if "owner" not in st.session_state:
@@ -104,8 +150,45 @@ if st.button("Generate schedule"):
             plan_date=date.today(),
         )
         plan.generate()
-        st.text(plan.summary())
+        st.session_state.plan = plan
 
-        unscheduled = plan.unscheduled_tasks()
-        if unscheduled:
-            st.warning(f"{len(unscheduled)} task(s) didn't fit in the available window.")
+if st.session_state.get("plan"):
+    plan = st.session_state.plan
+
+    # Conflict warnings
+    conflicts = plan.detect_conflicts()
+    if conflicts:
+        for c in conflicts:
+            st.warning(f"⚠️ {c}")
+
+    # Scheduled tasks sorted by time with Done buttons
+    scheduled = plan.sort_by_time()
+    unscheduled = plan.unscheduled_tasks()
+
+    if scheduled:
+        st.write("**Scheduled tasks:**")
+        for i, task in enumerate(scheduled):
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                status = "✓" if task.completed else "○"
+                st.write(
+                    f"{status} **{task.start_time.strftime('%I:%M %p')} – "
+                    f"{task.end_time.strftime('%I:%M %p')}** "
+                    f"— {task.name} ({task.pet.name})"
+                )
+            with col2:
+                if not task.completed:
+                    if st.button("Done", key=f"complete_{i}"):
+                        next_task = plan.mark_task_complete(task)
+                        if next_task:
+                            st.toast(f"'{task.name}' done! Next due: {next_task.due_date}")
+                        else:
+                            st.toast(f"'{task.name}' marked complete.")
+                        st.rerun()
+                else:
+                    st.write("✓ Done")
+
+    if unscheduled:
+        st.warning(f"{len(unscheduled)} task(s) didn't fit in the available window.")
+        for task in unscheduled:
+            st.write(f"  - {task.name} ({task.pet.name}, {task.duration_minutes} min)")
