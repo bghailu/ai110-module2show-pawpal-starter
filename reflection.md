@@ -10,6 +10,8 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+Owner holds the user's time constraints and knows how much time is available in a day. An Owner can have multiple Pet objects, each representing a single animal with basic identity info. A Task belongs to one Pet and captures what needs to be done, how long it takes, and how urgent it is — it also holds its own scheduled time once assigned. DailyPlan is the central coordinator: given an Owner and a list of Task objects, it runs the scheduling logic, assigns start times to tasks that fit within the owner's window, and can produce a human-readable summary of the result.
+
 **b. Design changes**
 
 - Did your design change during implementation?
